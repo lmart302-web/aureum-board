@@ -1,0 +1,559 @@
+
+/* ==========================================
+   AUREUM BOARD
+   기본 디자인
+========================================== */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg: #f5f7f4;
+    --white: #ffffff;
+    --green: #668b72;
+    --green-dark: #496d55;
+    --green-light: #eaf1eb;
+    --text: #303b33;
+    --gray: #858d86;
+    --border: #e5eae5;
+}
+
+body {
+    font-family: "Malgun Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.app-container {
+    max-width: 1200px;
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 30px;
+}
+
+/* 상단 헤더 */
+
+.header {
+    background: var(--white);
+    padding: 28px 32px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    margin-bottom: 20px;
+}
+
+.logo-area h1 {
+    font-size: 25px;
+    letter-spacing: 1px;
+    color: var(--green-dark);
+}
+
+.logo-area p {
+    margin-top: 7px;
+    font-size: 13px;
+    color: var(--gray);
+}
+
+/* 메뉴 */
+
+.main-nav {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 32px;
+}
+
+.nav-button {
+    border: none;
+    background: var(--white);
+    color: var(--gray);
+    padding: 13px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+.nav-button:hover {
+    background: var(--green-light);
+    color: var(--green-dark);
+}
+
+.nav-button.active {
+    background: var(--green-dark);
+    color: white;
+}
+
+/* 환영 영역 */
+
+.welcome-section {
+    margin-bottom: 35px;
+}
+
+.welcome-section h2 {
+    font-size: 25px;
+    margin-bottom: 9px;
+}
+
+.welcome-section p {
+    color: var(--gray);
+    font-size: 14px;
+}
+
+/* 페이지 */
+
+.page {
+    display: none;
+}
+
+.page.active {
+    display: block;
+}
+
+.section-header {
+    margin-bottom: 22px;
+}
+
+.section-header h2,
+.page > h2 {
+    font-size: 21px;
+    margin-bottom: 8px;
+}
+
+.section-header p,
+.page > p {
+    color: var(--gray);
+    font-size: 13px;
+}
+
+/* 하단 */
+
+footer {
+    margin-top: 60px;
+    padding: 20px 0;
+    border-top: 1px solid var(--border);
+    color: var(--gray);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+/* 모바일 */
+
+@media (max-width: 600px) {
+    .app-container {
+        padding: 16px;
+    }
+
+    .header {
+        padding: 23px 20px;
+    }
+
+    .logo-area h1 {
+        font-size: 21px;
+    }
+
+    .main-nav {
+        gap: 6px;
+    }
+
+    .nav-button {
+        flex: 1;
+        padding: 12px 5px;
+        font-size: 12px;
+    }
+
+    .welcome-section h2 {
+        font-size: 21px;
+    }
+}
+
+
+/* ==========================================
+   조직도
+========================================== */
+
+#organization-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.class-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    padding: 20px;
+}
+
+.class-header {
+    background: var(--green-light);
+    padding: 13px;
+    border-radius: 9px;
+    margin-bottom: 15px;
+}
+
+.class-header h3 {
+    color: var(--green-dark);
+    font-size: 17px;
+}
+
+.team-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.team-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.team-card h4 {
+    font-size: 15px;
+    margin-bottom: 7px;
+}
+
+.team-card p {
+    color: var(--gray);
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+.team-status {
+    display: inline-block;
+    background: #edf5ee;
+    color: var(--green-dark);
+    padding: 5px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+}
+
+@media (max-width: 600px) {
+    #organization-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* ==========================================
+   팀 상세 정보
+========================================== */
+
+#team-detail-container {
+    margin-top: 20px;
+}
+
+.team-detail-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    padding: 24px;
+}
+
+.team-detail-card h3 {
+    font-size: 20px;
+    color: var(--green-dark);
+    margin-bottom: 18px;
+}
+
+.member-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.member-item {
+    background: var(--bg);
+    border-radius: 9px;
+    padding: 13px 15px;
+    font-size: 14px;
+}
+
+.team-card {
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.team-card:hover {
+    border-color: var(--green);
+    background: #fbfdfb;
+}
+
+
+/* ==========================================
+   구성원 관리 기능
+========================================== */
+
+.member-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.delete-member-button {
+    border: none;
+    background: #f8eaea;
+    color: #b45e5e;
+    padding: 7px 12px;
+    border-radius: 7px;
+    font-size: 12px;
+}
+
+.member-add-area {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.member-add-area input {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 14px;
+    outline: none;
+}
+
+.member-add-area input:focus {
+    border-color: var(--green);
+}
+
+.member-add-area button {
+    border: none;
+    background: var(--green-dark);
+    color: white;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+@media (max-width: 450px) {
+    .member-add-area {
+        flex-direction: column;
+    }
+}
+
+
+/* ==========================================
+   전체 구성원 관리
+========================================== */
+
+.members-management-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.management-class-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+}
+
+.management-class-card > h3 {
+    color: var(--green-dark);
+    font-size: 18px;
+    margin-bottom: 15px;
+}
+
+.management-team {
+    border-top: 1px solid var(--border);
+    padding: 16px 0;
+}
+
+.management-team-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.management-team-header span {
+    color: var(--gray);
+    font-size: 12px;
+}
+
+.management-member-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.management-member {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+    border-radius: 7px;
+    padding: 10px 12px;
+    font-size: 13px;
+}
+
+.delete-management-member {
+    border: none;
+    background: #f8eaea;
+    color: #b45e5e;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 11px;
+}
+
+.management-add-area {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.management-name-input {
+    flex: 1;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    outline: none;
+}
+
+.management-add-button {
+    border: none;
+    background: var(--green-dark);
+    color: white;
+    padding: 0 17px;
+    border-radius: 7px;
+}
+
+
+/* 구성원 이동 버튼 */
+
+.member-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.move-management-member {
+    border: none;
+    background: var(--green-light);
+    color: var(--green-dark);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 11px;
+}
+
+
+/* ==========================================
+   휴가 달력
+========================================== */
+
+.calendar-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    padding: 22px;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 22px;
+}
+
+.calendar-header h3 {
+    font-size: 19px;
+    color: var(--green-dark);
+}
+
+.calendar-header button {
+    border: 1px solid var(--border);
+    background: var(--white);
+    padding: 9px 14px;
+    border-radius: 8px;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.calendar-header button:hover {
+    background: var(--green-light);
+}
+
+.calendar-weekdays,
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.calendar-weekdays > div {
+    text-align: center;
+    padding: 12px 0;
+    font-size: 13px;
+    color: var(--gray);
+    font-weight: 600;
+}
+
+.calendar-weekdays > div:first-child {
+    color: #c47777;
+}
+
+.calendar-weekdays > div:last-child {
+    color: #6685b5;
+}
+
+.calendar-day {
+    min-height: 110px;
+    border-top: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    padding: 10px 7px;
+    background: var(--white);
+}
+
+.calendar-day:nth-child(7n) {
+    border-right: none;
+}
+
+.calendar-day:nth-child(7n + 1) .day-number {
+    color: #c47777;
+}
+
+.calendar-day:nth-child(7n) .day-number {
+    color: #6685b5;
+}
+
+.calendar-day .day-number {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.calendar-day.today {
+    background: var(--green-light);
+}
+
+.calendar-day.empty {
+    background: #fafbfa;
+}
+
+@media (max-width: 600px) {
+    .calendar-card {
+        padding: 10px;
+    }
+
+    .calendar-day {
+        min-height: 75px;
+        padding: 6px 3px;
+    }
+
+    .calendar-day .day-number {
+        font-size: 11px;
+    }
+}
