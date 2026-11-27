@@ -19,9 +19,9 @@
         </header>
 
         <nav class="main-nav">
-    <button class="nav-button active" data-page="organization">조직도</button>
-    <button class="nav-button" data-page="calendar">휴가 달력</button>
-</nav>
+            <button class="nav-button active" data-page="organization">조직도</button>
+            <button class="nav-button" data-page="calendar">휴가 달력</button>
+        </nav>
 
         <main id="main-content">
             <section class="welcome-section">
@@ -31,55 +31,52 @@
 
             <section id="organization-page" class="page active">
                 <div class="section-header">
-    <div>
-        <h2>조직도</h2>       
-    </div>
+                    <div>
+                        <h2>조직도</h2>
+                    </div>
 
-    <button id="open-members-button">
-        구성원 관리
-    </button>
-</div>
+                    <button id="open-members-button">
+                        구성원 관리
+                    </button>
+                </div>
 
                 <div id="organization-container"></div>
-               
             </section>
 
-            
-<section id="calendar-page" class="page">
+            <section id="calendar-page" class="page">
 
-    <div class="section-header">
-        <div>
-            <h2>휴가 달력</h2>
-            <p>팀별 휴가 일정을 한눈에 확인하세요.</p>
-        </div>
-    </div>
+                <div class="section-header">
+                    <div>
+                        <h2>휴가 달력</h2>
+                        <p>팀별 휴가 일정을 한눈에 확인하세요.</p>
+                    </div>
+                </div>
 
-    <div class="calendar-card">
+                <div class="calendar-card">
 
-        <div class="calendar-header">
-            <button id="prev-month">이전</button>
-            <h3 id="calendar-title"></h3>
-            <button id="next-month">다음</button>
-        </div>
+                    <div class="calendar-header">
+                        <button id="prev-month">이전</button>
+                        <h3 id="calendar-title"></h3>
+                        <button id="next-month">다음</button>
+                    </div>
 
-        <div class="calendar-weekdays">
-            <div>일</div>
-            <div>월</div>
-            <div>화</div>
-            <div>수</div>
-            <div>목</div>
-            <div>금</div>
-            <div>토</div>
-        </div>
+                    <div class="calendar-weekdays">
+                        <div>일</div>
+                        <div>월</div>
+                        <div>화</div>
+                        <div>수</div>
+                        <div>목</div>
+                        <div>금</div>
+                        <div>토</div>
+                    </div>
 
-        <div id="calendar-days" class="calendar-days"></div>
+                    <div id="calendar-days" class="calendar-days"></div>
 
-<div id="vacation-detail-container"></div>
+                    <div id="vacation-detail-container"></div>
 
-    </div>
+                </div>
 
-</section>
-
+            </section>
 
             <section id="members-page" class="page">
                 <h2>구성원 관리</h2>

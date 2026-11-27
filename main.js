@@ -40,7 +40,6 @@ const memberData = {
     "리앙팀": []
 };
 
-// 휠체어 이용 구성원
 const wheelchairData = {
     "평화팀": [],
     "사랑팀": [],
@@ -54,8 +53,6 @@ const wheelchairData = {
     "리앙팀": []
 };
 
-// 구성원 역할: provider / user
-// 기존 구성원은 모두 이용인으로 처리
 const roleData = {
     "평화팀": {},
     "사랑팀": {},
@@ -260,6 +257,45 @@ async function moveMemberSafely(fromTeam, targetTeam, name) {
 }
 
 
+// 구성원 순서 변경
+async function reorderMemberSafely(team, fromIndex, toIndex) {
+    return await runTransaction(db, async transaction => {
+        const snapshot = await transaction.get(memberDocument);
+
+        if (!snapshot.exists()) return false;
+
+        const data = snapshot.data();
+
+        const teams = { ...(data.teams || {}) };
+
+        const currentMembers = [...(teams[team] || [])];
+
+        if (
+            fromIndex < 0 ||
+            toIndex < 0 ||
+            fromIndex >= currentMembers.length ||
+            toIndex >= currentMembers.length
+        ) {
+            return false;
+        }
+
+        const [member] = currentMembers.splice(fromIndex, 1);
+
+        currentMembers.splice(toIndex, 0, member);
+
+        teams[team] = currentMembers;
+
+        transaction.set(memberDocument, {
+            teams,
+            wheelchair: data.wheelchair || wheelchairData,
+            roles: data.roles || roleData
+        });
+
+        return true;
+    });
+}
+
+
 /* ==========================================
    FIREBASE 휴가 데이터 관리
 ========================================== */
@@ -336,7 +372,6 @@ async function deleteVacationSafely(date, team) {
 
 function startFirebaseSync() {
 
-    // 조직도 기본 정보 초기화
     getDoc(organizationDocument)
         .then(snapshot => {
             if (!snapshot.exists()) {
@@ -444,7 +479,8 @@ function renderOrganization() {
         `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
     const todayVacations = vacationData[todayKey] || [];
-const todayReplacements = vacationReplacementData[todayKey] || [];
+    const todayReplacements = vacationReplacementData[todayKey] || [];
+
     const totalTeams = organizationData.reduce(
         (total, group) => total + group.teams.length, 0
     );
@@ -465,7 +501,6 @@ const todayReplacements = vacationReplacementData[todayKey] || [];
         wheelchairCount += wheelchairData[team].length;
     });
 
-    // 조직도 제목 옆 인원 현황
     const organizationTitle = document.querySelector(
         "#organization-page .section-header h2"
     );
@@ -494,7 +529,7 @@ const todayReplacements = vacationReplacementData[todayKey] || [];
 
                 ${group.teams.map(team => {
                     const isVacation = todayVacations.includes(team);
-const isReplacement = todayReplacements.includes(team);
+                    const isReplacement = todayReplacements.includes(team);
 
                     return `
                         <div class="team-card">
@@ -503,16 +538,16 @@ const isReplacement = todayReplacements.includes(team);
                                 <h4>${escapeHTML(team)}</h4>
 
                                 <span class="team-status ${
-    isReplacement ? "substitute" : isVacation ? "vacation" : "working"
-}">
-    ${
-        isReplacement
-            ? "대체인력"
-            : isVacation
-                ? "휴가"
-                : "정상근무"
-    }
-</span>
+                                    isReplacement ? "substitute" : isVacation ? "vacation" : "working"
+                                }">
+                                    ${
+                                        isReplacement
+                                            ? "대체인력"
+                                            : isVacation
+                                                ? "휴가"
+                                                : "정상근무"
+                                    }
+                                </span>
                             </div>
 
                             <div class="team-members">
@@ -654,6 +689,26 @@ function renderMembersPage() {
                                             <div class="member-actions">
 
                                                 <button
+                                                    class="order-management-member"
+                                                    data-team="${escapeHTML(team)}"
+                                                    data-index="${index}"
+                                                    data-direction="up"
+                                                    ${index === 0 ? "disabled" : ""}
+                                                    title="위로 이동">
+                                                    ▲
+                                                </button>
+
+                                                <button
+                                                    class="order-management-member"
+                                                    data-team="${escapeHTML(team)}"
+                                                    data-index="${index}"
+                                                    data-direction="down"
+                                                    ${index === memberData[team].length - 1 ? "disabled" : ""}
+                                                    title="아래로 이동">
+                                                    ▼
+                                                </button>
+
+                                                <button
                                                     class="move-management-member"
                                                     data-team="${escapeHTML(team)}"
                                                     data-index="${index}">
@@ -726,12 +781,49 @@ function renderMembersPage() {
         });
 
 
+    // 구성원 순서 변경
+    page.querySelectorAll(".order-management-member").forEach(button => {
+        button.addEventListener("click", async () => {
+
+            const team = button.dataset.team;
+            const fromIndex = Number(button.dataset.index);
+            const direction = button.dataset.direction;
+
+            const toIndex = direction === "up"
+                ? fromIndex - 1
+                : fromIndex + 1;
+
+            if (
+                toIndex < 0 ||
+                toIndex >= memberData[team].length
+            ) {
+                return;
+            }
+
+            try {
+                const reordered = await reorderMemberSafely(
+                    team,
+                    fromIndex,
+                    toIndex
+                );
+
+                if (!reordered) {
+                    alert("구성원 순서를 변경하지 못했습니다. 화면을 확인해주세요.");
+                }
+
+            } catch (error) {
+                console.error("구성원 순서 변경 오류:", error);
+                alert("구성원 순서 변경에 실패했습니다.");
+            }
+        });
+    });
+
+
     // 구성원 추가
     page.querySelectorAll(".management-add-button").forEach(button => {
         button.addEventListener("click", async () => {
 
             const team = button.dataset.team;
-
             const area = button.parentElement;
 
             const input = area.querySelector(".management-name-input");
@@ -900,15 +992,23 @@ function renderCalendar() {
 
                 <div class="calendar-vacation-list">
 
-                    ${teams.map(team => `
-    <div class="calendar-vacation-item">
-    <span class="vacation-team-name">${escapeHTML(team)}</span>
-    ${replacementTeams.includes(team)
-        ? `<span class="replacement-label">(대체인력)</span>`
-        : ""
-    }
-</div>
-`).join("")}
+                    ${teams.map(team => {
+                        const isReplacement = replacementTeams.includes(team);
+
+                        return `
+                            <div class="calendar-vacation-item ${
+                                isReplacement ? "replacement-vacation" : "normal-vacation"
+                            }">
+                                <span class="vacation-team-name">
+                                    ${escapeHTML(team)}
+                                </span>
+                                ${isReplacement
+                                    ? `<span class="replacement-label">(대체)</span>`
+                                    : ""
+                                }
+                            </div>
+                        `;
+                    }).join("")}
 
                 </div>
 

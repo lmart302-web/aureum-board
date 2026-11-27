@@ -1,3 +1,4 @@
+
 /* ==========================================
    AUREUM BOARD
    기본 디자인
@@ -155,7 +156,10 @@ footer {
     text-align: center;
 }
 
-/* 조직도 */
+/* ==========================================
+   조직도
+========================================== */
+
 #organization-container {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -262,7 +266,8 @@ footer {
     padding: 3px 0;
 }
 
-.role-icon {
+.role-icon,
+.member-role-icon {
     font-size: 14px;
     line-height: 1;
 }
@@ -297,7 +302,10 @@ footer {
     background: var(--green);
 }
 
-/* 전체 구성원 관리 */
+/* ==========================================
+   전체 구성원 관리
+========================================== */
+
 .members-management-list {
     display: flex;
     flex-direction: column;
@@ -366,8 +374,32 @@ footer {
 
 .member-actions {
     display: flex;
-    gap: 6px;
+    align-items: center;
+    gap: 5px;
     flex-shrink: 0;
+}
+
+/* 순서 변경 버튼 */
+.order-management-member {
+    width: 27px;
+    height: 27px;
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--green-dark);
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 0;
+}
+
+.order-management-member:hover:not(:disabled) {
+    background: var(--green-light);
+    border-color: var(--green);
+}
+
+.order-management-member:disabled {
+    opacity: 0.3;
+    cursor: default;
 }
 
 .delete-management-member {
@@ -442,7 +474,10 @@ footer {
     accent-color: var(--green-dark);
 }
 
-/* 휴가 달력 */
+/* ==========================================
+   휴가 달력
+========================================== */
+
 .calendar-card {
     background: var(--white);
     border: 1px solid var(--border);
@@ -540,33 +575,53 @@ footer {
 .calendar-vacation-list {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
 }
 
-.calendar-vacation-item,
-.calendar-substitute-item {
+/* 휴가 팀 이름 공통 */
+.calendar-vacation-item {
+    display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    padding: 4px 5px;
     border-radius: 4px;
+    padding: 3px 4px;
     font-size: 10px;
-    line-height: 1.3;
+    line-height: 1.4;
+    font-weight: 600;
 }
 
-.calendar-vacation-item {
-    background: transparent;
+/* 일반 휴가 - 빨간색 */
+.calendar-vacation-item.normal-vacation {
+    background: #fbe9e9;
+    border: 1px solid #d98282;
     color: #bd5555;
-    border: none;
-    padding: 0;
 }
 
-.calendar-substitute-item {
-    background: #e9effa;
-    color: #5273a7;
+/* 대체인력 - 파란색 */
+.calendar-vacation-item.replacement-vacation {
+    background: #e3edff;
+    border: 1px solid #7da3df;
+    color: #3974c6;
 }
 
-/* 날짜별 일정 관리 */
+/* 팀 이름 */
+.vacation-team-name {
+    display: inline;
+}
+
+/* 대체인력 글씨 */
+.replacement-label {
+    font-size: 9px;
+    font-weight: 700;
+    margin-left: 2px;
+    color: #3974c6;
+}
+
+/* ==========================================
+   날짜별 일정 관리
+========================================== */
+
 .vacation-detail-card {
     margin-top: 22px;
     padding: 20px;
@@ -677,8 +732,12 @@ footer {
     padding: 5px 0;
 }
 
-/* 모바일 반응형 */
+/* ==========================================
+   모바일 반응형
+========================================== */
+
 @media (max-width: 600px) {
+
     .app-container {
         padding: 16px;
     }
@@ -705,10 +764,68 @@ footer {
         font-size: 21px;
     }
 
+    /* 모바일 조직도 2열 */
     #organization-container {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
     }
 
+    .class-card {
+        padding: 10px;
+        min-width: 0;
+    }
+
+    .class-header {
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+
+    .class-header h3 {
+        font-size: 15px;
+    }
+
+    .team-list {
+        gap: 7px;
+    }
+
+    .team-card {
+        padding: 9px;
+    }
+
+    .team-card h4 {
+        font-size: 13px;
+    }
+
+    .team-title-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 5px;
+        margin-bottom: 7px;
+    }
+
+    .team-status {
+        font-size: 10px;
+        padding: 4px 7px;
+    }
+
+    .team-member-name {
+        font-size: 11px;
+        gap: 3px;
+    }
+
+    .member-role-icon,
+    .wheelchair-icon {
+        font-size: 12px;
+    }
+
+    #organization-summary {
+        display: block;
+        margin: 7px 0 0;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    /* 휴가 달력 */
     .calendar-card {
         padding: 10px;
     }
@@ -722,21 +839,18 @@ footer {
         font-size: 11px;
     }
 
-    .calendar-vacation-item,
-    .calendar-substitute-item {
+    .calendar-vacation-item {
         font-size: 9px;
         padding: 3px 2px;
     }
 
-    #organization-summary {
-        display: block;
-        margin: 7px 0 0;
-        font-size: 12px;
-        line-height: 1.5;
+    .replacement-label {
+        font-size: 8px;
     }
 }
 
 @media (max-width: 450px) {
+
     #open-members-button,
     #back-organization-button {
         padding: 10px 12px;
@@ -756,6 +870,27 @@ footer {
         flex: 1;
     }
 
+    .management-member {
+        padding: 9px 7px;
+        gap: 5px;
+    }
+
+    .member-actions {
+        gap: 3px;
+    }
+
+    .order-management-member {
+        width: 24px;
+        height: 26px;
+        font-size: 10px;
+    }
+
+    .move-management-member,
+    .delete-management-member {
+        padding: 6px 7px;
+        font-size: 10px;
+    }
+
     .calendar-day {
         min-height: 70px;
     }
@@ -773,25 +908,11 @@ footer {
     }
 }
 
-/* 조직도 대체인력 상태 */
+/* ==========================================
+   조직도 대체인력 상태
+========================================== */
+
 .team-status.substitute {
     background: #e3edff;
     color: #3974c6;
-}
-
-/* 휴가 달력 대체인력 글씨 */
-.replacement-label {
-    color: #3974c6;
-    font-weight: 700;
-    margin-left: 3px;
-}
-
-/* 휴가 달력: 팀 이름에만 빨간 테두리 */
-.vacation-team-name {
-    display: inline-block;
-    border: 1px solid #d98282;
-    border-radius: 3px;
-    padding: 1px 5px;
-    color: #bd5555;
-    background: transparent;
 }
