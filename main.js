@@ -6,7 +6,6 @@ import {
     doc,
     getDoc,
     setDoc,
-    deleteDoc,
     onSnapshot,
     runTransaction
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
@@ -17,32 +16,17 @@ import {
    조직도 기본 데이터
 ========================================== */
 
-// 반별 팀 구성
 const organizationData = [
-    {
-        name: "1반",
-        teams: ["평화팀", "사랑팀"]
-    },
-    {
-        name: "2반",
-        teams: ["호!팀", "우주팀"]
-    },
-    {
-        name: "3반",
-        teams: ["동광팀", "지구팀", "나비팀"]
-    },
-    {
-        name: "4반",
-        teams: ["코스모스팀", "해바라기팀", "리앙팀"]
-    }
+    { name: "1반", teams: ["평화팀", "사랑팀"] },
+    { name: "2반", teams: ["호!팀", "우주팀"] },
+    { name: "3반", teams: ["동광팀", "지구팀", "나비팀"] },
+    { name: "4반", teams: ["코스모스팀", "해바라기팀", "리앙팀"] }
 ];
 
-// 조직도 표시 영역
 const organizationContainer = document.getElementById(
     "organization-container"
 );
 
-// 팀별 구성원 데이터
 const memberData = {
     "평화팀": [],
     "사랑팀": [],
@@ -56,8 +40,34 @@ const memberData = {
     "리앙팀": []
 };
 
-// 선택된 팀
-let selectedTeam = null;
+// 휠체어 이용 구성원
+const wheelchairData = {
+    "평화팀": [],
+    "사랑팀": [],
+    "호!팀": [],
+    "우주팀": [],
+    "동광팀": [],
+    "지구팀": [],
+    "나비팀": [],
+    "코스모스팀": [],
+    "해바라기팀": [],
+    "리앙팀": []
+};
+
+// 구성원 역할: provider / user
+// 기존 구성원은 모두 이용인으로 처리
+const roleData = {
+    "평화팀": {},
+    "사랑팀": {},
+    "호!팀": {},
+    "우주팀": {},
+    "동광팀": {},
+    "지구팀": {},
+    "나비팀": {},
+    "코스모스팀": {},
+    "해바라기팀": {},
+    "리앙팀": {}
+};
 
 
 /* ==========================================
@@ -68,16 +78,13 @@ const memberDocument = doc(db, "settings", "members");
 const organizationDocument = doc(db, "settings", "organization");
 const vacationCollection = collection(db, "vacations");
 
-// 날짜별 휴가 데이터
 const vacationData = {};
+const vacationReplacementData = {};
 
-// 현재 표시할 달
 let calendarDate = new Date();
-
-// 선택한 날짜
 let selectedVacationDate = null;
 
-// HTML 특수문자 처리
+
 function escapeHTML(value) {
     return String(value).replace(/[&<>"']/g, character => {
         const entities = {
@@ -90,6 +97,14 @@ function escapeHTML(value) {
 
         return entities[character];
     });
+}
+
+function getMemberRole(team, member) {
+    return roleData[team]?.[member] || "user";
+}
+
+function getRoleIcon(role) {
+    return role === "provider" ? "👨‍💼" : "🧑";
 }
 
 
@@ -105,7 +120,9 @@ async function saveMembers() {
 
             if (!snapshot.exists()) {
                 transaction.set(memberDocument, {
-                    teams: memberData
+                    teams: memberData,
+                    wheelchair: wheelchairData,
+                    roles: roleData
                 });
             }
         });
@@ -116,15 +133,19 @@ async function saveMembers() {
 
 
 // 구성원 추가
-async function addMemberSafely(team, name) {
+async function addMemberSafely(team, name, role, isWheelchair) {
     return await runTransaction(db, async transaction => {
         const snapshot = await transaction.get(memberDocument);
 
-        const teams = snapshot.exists()
-            ? snapshot.data().teams || {}
-            : {};
+        const data = snapshot.exists() ? snapshot.data() : {};
+
+        const teams = { ...(data.teams || {}) };
+        const wheelchair = { ...(data.wheelchair || {}) };
+        const roles = { ...(data.roles || {}) };
 
         const currentMembers = teams[team] || [];
+        const currentWheelchair = wheelchair[team] || [];
+        const currentRoles = { ...(roles[team] || {}) };
 
         if (currentMembers.includes(name)) {
             return false;
@@ -132,7 +153,18 @@ async function addMemberSafely(team, name) {
 
         teams[team] = [...currentMembers, name];
 
-        transaction.set(memberDocument, { teams });
+        wheelchair[team] = isWheelchair
+            ? [...currentWheelchair, name]
+            : currentWheelchair;
+
+        currentRoles[name] = role;
+        roles[team] = currentRoles;
+
+        transaction.set(memberDocument, {
+            teams,
+            wheelchair,
+            roles
+        });
 
         return true;
     });
@@ -144,21 +176,32 @@ async function deleteMemberSafely(team, name) {
     return await runTransaction(db, async transaction => {
         const snapshot = await transaction.get(memberDocument);
 
-        if (!snapshot.exists()) {
-            return false;
-        }
+        if (!snapshot.exists()) return false;
 
-        const teams = snapshot.data().teams || {};
+        const data = snapshot.data();
+
+        const teams = { ...(data.teams || {}) };
+        const wheelchair = { ...(data.wheelchair || {}) };
+        const roles = { ...(data.roles || {}) };
+
         const currentMembers = teams[team] || [];
-        const index = currentMembers.indexOf(name);
 
-        if (index === -1) {
-            return false;
-        }
+        if (!currentMembers.includes(name)) return false;
 
-        teams[team] = currentMembers.filter((member, i) => i !== index);
+        teams[team] = currentMembers.filter(member => member !== name);
 
-        transaction.set(memberDocument, { teams });
+        wheelchair[team] = (wheelchair[team] || [])
+            .filter(member => member !== name);
+
+        const currentRoles = { ...(roles[team] || {}) };
+        delete currentRoles[name];
+        roles[team] = currentRoles;
+
+        transaction.set(memberDocument, {
+            teams,
+            wheelchair,
+            roles
+        });
 
         return true;
     });
@@ -170,25 +213,47 @@ async function moveMemberSafely(fromTeam, targetTeam, name) {
     return await runTransaction(db, async transaction => {
         const snapshot = await transaction.get(memberDocument);
 
-        if (!snapshot.exists()) {
-            return false;
-        }
+        if (!snapshot.exists()) return false;
 
-        const teams = snapshot.data().teams || {};
+        const data = snapshot.data();
+
+        const teams = { ...(data.teams || {}) };
+        const wheelchair = { ...(data.wheelchair || {}) };
+        const roles = { ...(data.roles || {}) };
 
         const sourceMembers = teams[fromTeam] || [];
         const targetMembers = teams[targetTeam] || [];
 
-        const index = sourceMembers.indexOf(name);
-
-        if (index === -1 || targetMembers.includes(name)) {
+        if (!sourceMembers.includes(name) || targetMembers.includes(name)) {
             return false;
         }
 
-        teams[fromTeam] = sourceMembers.filter((member, i) => i !== index);
+        const isWheelchair = (wheelchair[fromTeam] || []).includes(name);
+        const memberRole = roles[fromTeam]?.[name] || "user";
+
+        teams[fromTeam] = sourceMembers.filter(member => member !== name);
         teams[targetTeam] = [...targetMembers, name];
 
-        transaction.set(memberDocument, { teams });
+        wheelchair[fromTeam] = (wheelchair[fromTeam] || [])
+            .filter(member => member !== name);
+
+        wheelchair[targetTeam] = wheelchair[targetTeam] || [];
+
+        if (isWheelchair) {
+            wheelchair[targetTeam].push(name);
+        }
+
+        roles[fromTeam] = { ...(roles[fromTeam] || {}) };
+        roles[targetTeam] = { ...(roles[targetTeam] || {}) };
+
+        delete roles[fromTeam][name];
+        roles[targetTeam][name] = memberRole;
+
+        transaction.set(memberDocument, {
+            teams,
+            wheelchair,
+            roles
+        });
 
         return true;
     });
@@ -199,23 +264,34 @@ async function moveMemberSafely(fromTeam, targetTeam, name) {
    FIREBASE 휴가 데이터 관리
 ========================================== */
 
-// 휴가 등록
-async function addVacationSafely(date, team) {
+// 휴가 등록 및 대체인력 진행 여부 저장
+async function setVacationSafely(date, team, isReplacement) {
     const vacationDocument = doc(db, "vacations", date);
 
     return await runTransaction(db, async transaction => {
         const snapshot = await transaction.get(vacationDocument);
 
-        const teams = snapshot.exists()
-            ? snapshot.data().teams || []
-            : [];
+        const data = snapshot.exists() ? snapshot.data() : {};
 
-        if (teams.includes(team)) {
-            return false;
+        const teams = [...(data.teams || [])];
+        const replacementTeams = [...(data.replacementTeams || [])];
+
+        if (!teams.includes(team)) {
+            teams.push(team);
+        }
+
+        const wasReplacement = replacementTeams.includes(team);
+
+        if (isReplacement && !wasReplacement) {
+            replacementTeams.push(team);
+        } else if (!isReplacement && wasReplacement) {
+            const index = replacementTeams.indexOf(team);
+            replacementTeams.splice(index, 1);
         }
 
         transaction.set(vacationDocument, {
-            teams: [...teams, team]
+            teams,
+            replacementTeams
         });
 
         return true;
@@ -230,23 +306,22 @@ async function deleteVacationSafely(date, team) {
     return await runTransaction(db, async transaction => {
         const snapshot = await transaction.get(vacationDocument);
 
-        if (!snapshot.exists()) {
-            return false;
-        }
+        if (!snapshot.exists()) return false;
 
-        const teams = snapshot.data().teams || [];
+        const data = snapshot.data();
 
-        if (!teams.includes(team)) {
-            return false;
-        }
+        const teams = (data.teams || [])
+            .filter(item => item !== team);
 
-        const updatedTeams = teams.filter(item => item !== team);
+        const replacementTeams = (data.replacementTeams || [])
+            .filter(item => item !== team);
 
-        if (updatedTeams.length === 0) {
+        if (teams.length === 0) {
             transaction.delete(vacationDocument);
         } else {
             transaction.set(vacationDocument, {
-                teams: updatedTeams
+                teams,
+                replacementTeams
             });
         }
 
@@ -280,7 +355,6 @@ function startFirebaseSync() {
         memberDocument,
 
         snapshot => {
-
             if (!snapshot.exists()) {
                 saveMembers();
                 return;
@@ -292,10 +366,20 @@ function startFirebaseSync() {
                 memberData[team] = Array.isArray(data.teams?.[team])
                     ? data.teams[team]
                     : [];
+
+                wheelchairData[team] = Array.isArray(data.wheelchair?.[team])
+                    ? data.wheelchair[team]
+                    : [];
+
+                roleData[team] = {};
+
+                memberData[team].forEach(member => {
+                    roleData[team][member] =
+                        data.roles?.[team]?.[member] || "user";
+                });
             });
 
             renderOrganization();
-            renderTeamDetail();
 
             const membersPage = document.getElementById("members-page");
 
@@ -315,22 +399,29 @@ function startFirebaseSync() {
         vacationCollection,
 
         snapshot => {
-
-            // 기존 데이터 초기화
             Object.keys(vacationData).forEach(date => {
                 delete vacationData[date];
             });
 
-            // Firestore 데이터 반영
+            Object.keys(vacationReplacementData).forEach(date => {
+                delete vacationReplacementData[date];
+            });
+
             snapshot.forEach(documentSnapshot => {
                 const data = documentSnapshot.data();
 
                 vacationData[documentSnapshot.id] =
                     Array.isArray(data.teams) ? data.teams : [];
+
+                vacationReplacementData[documentSnapshot.id] =
+                    Array.isArray(data.replacementTeams)
+                        ? data.replacementTeams
+                        : [];
             });
 
             renderCalendar();
             renderVacationDetail();
+            renderOrganization();
         },
 
         error => {
@@ -345,91 +436,119 @@ function startFirebaseSync() {
 ========================================== */
 
 function renderOrganization() {
-
     if (!organizationContainer) return;
+
+    const today = new Date();
+
+    const todayKey =
+        `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+    const todayVacations = vacationData[todayKey] || [];
+const todayReplacements = vacationReplacementData[todayKey] || [];
+    const totalTeams = organizationData.reduce(
+        (total, group) => total + group.teams.length, 0
+    );
+
+    let providerCount = 0;
+    let userCount = 0;
+    let wheelchairCount = 0;
+
+    Object.keys(memberData).forEach(team => {
+        memberData[team].forEach(member => {
+            if (getMemberRole(team, member) === "provider") {
+                providerCount++;
+            } else {
+                userCount++;
+            }
+        });
+
+        wheelchairCount += wheelchairData[team].length;
+    });
+
+    // 조직도 제목 옆 인원 현황
+    const organizationTitle = document.querySelector(
+        "#organization-page .section-header h2"
+    );
+
+    if (organizationTitle) {
+        let summary = document.getElementById("organization-summary");
+
+        if (!summary) {
+            summary = document.createElement("span");
+            summary.id = "organization-summary";
+            organizationTitle.appendChild(summary);
+        }
+
+        summary.textContent =
+            ` ${totalTeams}팀 · 제공인력 ${providerCount}명 · 이용인 ${userCount}명 (휠체어 ${wheelchairCount}대)`;
+    }
 
     organizationContainer.innerHTML = organizationData.map(group => `
         <div class="class-card">
 
             <div class="class-header">
-                <h3>${group.name}</h3>
+                <h3>${escapeHTML(group.name)}</h3>
             </div>
 
             <div class="team-list">
 
-                ${group.teams.map(team => `
-                    <div class="team-card"
-                         data-team="${escapeHTML(team)}"
-                         style="${selectedTeam === team
-                            ? 'border-color: var(--green); background: var(--green-light);'
-                            : ''}">
+                ${group.teams.map(team => {
+                    const isVacation = todayVacations.includes(team);
+const isReplacement = todayReplacements.includes(team);
 
-                        <h4>${escapeHTML(team)}</h4>
-                        <p>구성원 ${memberData[team].length}명</p>
-                        <span class="team-status">정상 근무</span>
+                    return `
+                        <div class="team-card">
 
-                    </div>
-                `).join("")}
+                            <div class="team-title-row">
+                                <h4>${escapeHTML(team)}</h4>
+
+                                <span class="team-status ${
+    isReplacement ? "substitute" : isVacation ? "vacation" : "working"
+}">
+    ${
+        isReplacement
+            ? "대체인력"
+            : isVacation
+                ? "휴가"
+                : "정상근무"
+    }
+</span>
+                            </div>
+
+                            <div class="team-members">
+
+                                ${(memberData[team] || []).length > 0
+                                    ? memberData[team].map(member => {
+                                        const role = getMemberRole(team, member);
+                                        const isWheelchair =
+                                            wheelchairData[team]?.includes(member);
+
+                                        return `
+                                            <div class="team-member-row">
+                                                <span class="team-member-name">
+                                                    <span class="member-role-icon" title="${role === "provider" ? "제공인력" : "이용인"}">
+                                                        ${getRoleIcon(role)}
+                                                    </span>
+                                                    ${escapeHTML(member)}
+                                                    ${isWheelchair
+                                                        ? `<span class="wheelchair-icon" title="휠체어 이용">♿</span>`
+                                                        : ""
+                                                    }
+                                                </span>
+                                            </div>
+                                        `;
+                                    }).join("")
+                                    : `<div class="empty-member">등록된 구성원 없음</div>`
+                                }
+
+                            </div>
+                        </div>
+                    `;
+                }).join("")}
 
             </div>
-
         </div>
     `).join("");
-
-
-    // 팀 클릭 이벤트
-    document.querySelectorAll(".team-card").forEach(card => {
-
-        card.addEventListener("click", () => {
-
-            selectedTeam = card.dataset.team;
-
-            renderOrganization();
-            renderTeamDetail();
-
-        });
-
-    });
-}
-
-
-/* ==========================================
-   팀 상세 정보
-========================================== */
-
-function renderTeamDetail() {
-
-    const container = document.getElementById("team-detail-container");
-
-    if (!container) return;
-
-    if (!selectedTeam) {
-        container.innerHTML = "";
-        return;
-    }
-
-    const members = memberData[selectedTeam];
-
-    container.innerHTML = `
-        <div class="team-detail-card">
-
-            <h3>${escapeHTML(selectedTeam)}</h3>
-
-            <div class="member-list">
-
-                ${members.length > 0
-                    ? members.map(member => `
-                        <div class="member-item">
-                            <span>${escapeHTML(member)}</span>
-                        </div>
-                    `).join("")
-                    : `<p>등록된 구성원이 없습니다.</p>`
-                }
-
-            </div>
-
-        </div>
-    `;
 }
 
 
@@ -440,10 +559,21 @@ function renderTeamDetail() {
 const navButtons = document.querySelectorAll(".nav-button");
 const pages = document.querySelectorAll(".page");
 
+document.getElementById("open-members-button")
+    ?.addEventListener("click", () => {
+
+        navButtons.forEach(nav => nav.classList.remove("active"));
+        pages.forEach(page => page.classList.remove("active"));
+
+        document.getElementById("members-page")
+            ?.classList.add("active");
+
+        renderMembersPage();
+    });
+
+
 navButtons.forEach(button => {
-
     button.addEventListener("click", () => {
-
         const targetPage = button.dataset.page;
 
         navButtons.forEach(nav => nav.classList.remove("active"));
@@ -457,9 +587,7 @@ navButtons.forEach(button => {
         if (targetPage === "members") {
             renderMembersPage();
         }
-
     });
-
 });
 
 
@@ -468,17 +596,22 @@ navButtons.forEach(button => {
 ========================================== */
 
 function renderMembersPage() {
-
     const page = document.getElementById("members-page");
 
     if (!page) return;
 
     page.innerHTML = `
         <div class="section-header">
+
             <div>
                 <h2>구성원 관리</h2>
                 <p>각 팀의 구성원을 추가하고 이동 및 삭제할 수 있습니다.</p>
             </div>
+
+            <button id="back-organization-button">
+                조직도로 돌아가기
+            </button>
+
         </div>
 
         <div class="members-management-list">
@@ -486,7 +619,7 @@ function renderMembersPage() {
             ${organizationData.map(group => `
                 <div class="management-class-card">
 
-                    <h3>${group.name}</h3>
+                    <h3>${escapeHTML(group.name)}</h3>
 
                     ${group.teams.map(team => `
                         <div class="management-team">
@@ -498,31 +631,46 @@ function renderMembersPage() {
 
                             <div class="management-member-list">
 
-                                ${memberData[team].map((member, index) => `
-                                    <div class="management-member">
+                                ${memberData[team].map((member, index) => {
+                                    const role = getMemberRole(team, member);
+                                    const isWheelchair =
+                                        wheelchairData[team]?.includes(member);
 
-                                        <span>${escapeHTML(member)}</span>
+                                    return `
+                                        <div class="management-member">
 
-                                        <div class="member-actions">
+                                            <span class="management-member-name">
+                                                ${getRoleIcon(role)}
+                                                ${escapeHTML(member)}
+                                                ${isWheelchair
+                                                    ? `<span class="wheelchair-icon" title="휠체어 이용">♿</span>`
+                                                    : ""
+                                                }
+                                                <small>
+                                                    ${role === "provider" ? "제공인력" : "이용인"}
+                                                </small>
+                                            </span>
 
-                                            <button
-                                                class="move-management-member"
-                                                data-team="${escapeHTML(team)}"
-                                                data-index="${index}">
-                                                이동
-                                            </button>
+                                            <div class="member-actions">
 
-                                            <button
-                                                class="delete-management-member"
-                                                data-team="${escapeHTML(team)}"
-                                                data-index="${index}">
-                                                삭제
-                                            </button>
+                                                <button
+                                                    class="move-management-member"
+                                                    data-team="${escapeHTML(team)}"
+                                                    data-index="${index}">
+                                                    이동
+                                                </button>
 
+                                                <button
+                                                    class="delete-management-member"
+                                                    data-team="${escapeHTML(team)}"
+                                                    data-index="${index}">
+                                                    삭제
+                                                </button>
+
+                                            </div>
                                         </div>
-
-                                    </div>
-                                `).join("")}
+                                    `;
+                                }).join("")}
 
                             </div>
 
@@ -534,6 +682,16 @@ function renderMembersPage() {
                                     data-team="${escapeHTML(team)}"
                                     placeholder="이름 입력"
                                 >
+
+                                <select class="management-role-select">
+                                    <option value="user">이용인</option>
+                                    <option value="provider">제공인력</option>
+                                </select>
+
+                                <label class="wheelchair-option">
+                                    <input type="checkbox" class="wheelchair-input">
+                                    휠체어
+                                </label>
 
                                 <button
                                     class="management-add-button"
@@ -553,18 +711,36 @@ function renderMembersPage() {
     `;
 
 
+    // 조직도로 돌아가기
+    document.getElementById("back-organization-button")
+        ?.addEventListener("click", () => {
+
+            pages.forEach(page => page.classList.remove("active"));
+            navButtons.forEach(nav => nav.classList.remove("active"));
+
+            document.getElementById("organization-page")
+                ?.classList.add("active");
+
+            document.querySelector('[data-page="organization"]')
+                ?.classList.add("active");
+        });
+
+
     // 구성원 추가
     page.querySelectorAll(".management-add-button").forEach(button => {
-
         button.addEventListener("click", async () => {
 
             const team = button.dataset.team;
 
-            const input = button.parentElement.querySelector(
-                ".management-name-input"
-            );
+            const area = button.parentElement;
+
+            const input = area.querySelector(".management-name-input");
+            const roleSelect = area.querySelector(".management-role-select");
+            const wheelchairInput = area.querySelector(".wheelchair-input");
 
             const name = input.value.trim();
+            const role = roleSelect.value;
+            const isWheelchair = role === "user" && wheelchairInput.checked;
 
             if (!name) {
                 alert("이름을 입력해주세요.");
@@ -572,7 +748,12 @@ function renderMembersPage() {
             }
 
             try {
-                const added = await addMemberSafely(team, name);
+                const added = await addMemberSafely(
+                    team,
+                    name,
+                    role,
+                    isWheelchair
+                );
 
                 if (!added) {
                     alert("이미 해당 팀에 등록된 구성원입니다.");
@@ -580,20 +761,19 @@ function renderMembersPage() {
                 }
 
                 input.value = "";
+                wheelchairInput.checked = false;
+                roleSelect.value = "user";
 
             } catch (error) {
                 console.error("구성원 추가 오류:", error);
                 alert("구성원 추가에 실패했습니다.");
             }
-
         });
-
     });
 
 
     // 구성원 삭제
     page.querySelectorAll(".delete-management-member").forEach(button => {
-
         button.addEventListener("click", async () => {
 
             const team = button.dataset.team;
@@ -617,15 +797,12 @@ function renderMembersPage() {
                 console.error("구성원 삭제 오류:", error);
                 alert("구성원 삭제에 실패했습니다.");
             }
-
         });
-
     });
 
 
     // 구성원 팀 이동
     page.querySelectorAll(".move-management-member").forEach(button => {
-
         button.addEventListener("click", async () => {
 
             const fromTeam = button.dataset.team;
@@ -666,11 +843,8 @@ function renderMembersPage() {
                 console.error("구성원 이동 오류:", error);
                 alert("구성원 이동에 실패했습니다.");
             }
-
         });
-
     });
-
 }
 
 
@@ -679,7 +853,6 @@ function renderMembersPage() {
 ========================================== */
 
 function renderCalendar() {
-
     const year = calendarDate.getFullYear();
     const month = calendarDate.getMonth();
 
@@ -697,18 +870,13 @@ function renderCalendar() {
 
     let calendarHTML = "";
 
-
-    // 첫 주 빈칸
     for (let i = 0; i < firstDay; i++) {
         calendarHTML += `
             <div class="calendar-day empty"></div>
         `;
     }
 
-
-    // 날짜 출력
     for (let day = 1; day <= lastDate; day++) {
-
         const dateKey =
             `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
@@ -720,6 +888,7 @@ function renderCalendar() {
         const isSelected = selectedVacationDate === dateKey;
 
         const teams = vacationData[dateKey] || [];
+        const replacementTeams = vacationReplacementData[dateKey] || [];
 
         calendarHTML += `
             <div class="calendar-day
@@ -732,10 +901,14 @@ function renderCalendar() {
                 <div class="calendar-vacation-list">
 
                     ${teams.map(team => `
-                        <div class="calendar-vacation-item">
-                            ${escapeHTML(team)}
-                        </div>
-                    `).join("")}
+    <div class="calendar-vacation-item">
+    <span class="vacation-team-name">${escapeHTML(team)}</span>
+    ${replacementTeams.includes(team)
+        ? `<span class="replacement-label">(대체인력)</span>`
+        : ""
+    }
+</div>
+`).join("")}
 
                 </div>
 
@@ -745,21 +918,16 @@ function renderCalendar() {
 
     daysContainer.innerHTML = calendarHTML;
 
+    daysContainer.querySelectorAll(".calendar-day:not(.empty)")
+        .forEach(dayElement => {
 
-    // 날짜 클릭
-    daysContainer.querySelectorAll(".calendar-day:not(.empty)").forEach(dayElement => {
+            dayElement.addEventListener("click", () => {
+                selectedVacationDate = dayElement.dataset.date;
 
-        dayElement.addEventListener("click", () => {
-
-            selectedVacationDate = dayElement.dataset.date;
-
-            renderCalendar();
-            renderVacationDetail();
-
+                renderCalendar();
+                renderVacationDetail();
+            });
         });
-
-    });
-
 }
 
 
@@ -767,24 +935,17 @@ function renderCalendar() {
    달력 월 이동
 ========================================== */
 
-// 이전 달
-document.getElementById("prev-month")?.addEventListener("click", () => {
+document.getElementById("prev-month")
+    ?.addEventListener("click", () => {
+        calendarDate.setMonth(calendarDate.getMonth() - 1);
+        renderCalendar();
+    });
 
-    calendarDate.setMonth(calendarDate.getMonth() - 1);
-
-    renderCalendar();
-
-});
-
-
-// 다음 달
-document.getElementById("next-month")?.addEventListener("click", () => {
-
-    calendarDate.setMonth(calendarDate.getMonth() + 1);
-
-    renderCalendar();
-
-});
+document.getElementById("next-month")
+    ?.addEventListener("click", () => {
+        calendarDate.setMonth(calendarDate.getMonth() + 1);
+        renderCalendar();
+    });
 
 
 /* ==========================================
@@ -792,7 +953,6 @@ document.getElementById("next-month")?.addEventListener("click", () => {
 ========================================== */
 
 function renderVacationDetail() {
-
     const container = document.getElementById("vacation-detail-container");
 
     if (!container) return;
@@ -803,6 +963,8 @@ function renderVacationDetail() {
     }
 
     const teams = vacationData[selectedVacationDate] || [];
+    const replacementTeams =
+        vacationReplacementData[selectedVacationDate] || [];
 
     container.innerHTML = `
         <div class="vacation-detail-card">
@@ -812,7 +974,6 @@ function renderVacationDetail() {
             <div class="vacation-add-area">
 
                 <select id="vacation-team-select">
-
                     <option value="">팀 선택</option>
 
                     ${Object.keys(memberData).map(team => `
@@ -820,8 +981,12 @@ function renderVacationDetail() {
                             ${escapeHTML(team)}
                         </option>
                     `).join("")}
-
                 </select>
+
+                <label class="replacement-option">
+                    <input type="checkbox" id="replacement-checkbox">
+                    대체인력 진행
+                </label>
 
                 <button id="add-vacation-button">
                     휴가 등록
@@ -829,14 +994,19 @@ function renderVacationDetail() {
 
             </div>
 
-
             <div id="vacation-team-list">
 
                 ${teams.length > 0
                     ? teams.map(team => `
                         <div class="vacation-team-item">
 
-                            <span>${escapeHTML(team)}</span>
+                            <span>
+                                ${escapeHTML(team)}
+                                ${replacementTeams.includes(team)
+                                    ? `<small class="replacement-label">대체인력 진행</small>`
+                                    : ""
+                                }
+                            </span>
 
                             <button
                                 class="delete-vacation-button"
@@ -855,15 +1025,17 @@ function renderVacationDetail() {
     `;
 
 
-    // 휴가 등록
+    // 휴가 등록 및 대체인력 진행 여부 저장
     document.getElementById("add-vacation-button")
         ?.addEventListener("click", async () => {
 
             const select = document.getElementById("vacation-team-select");
-            const team = select.value;
+            const replacementCheckbox =
+                document.getElementById("replacement-checkbox");
 
-            // 선택된 날짜를 별도로 저장
+            const team = select.value;
             const date = selectedVacationDate;
+            const isReplacement = replacementCheckbox.checked;
 
             if (!team) {
                 alert("팀을 선택해주세요.");
@@ -871,48 +1043,43 @@ function renderVacationDetail() {
             }
 
             try {
-                const added = await addVacationSafely(date, team);
+                await setVacationSafely(date, team, isReplacement);
 
-                if (!added) {
-                    alert("이미 등록된 팀입니다.");
-                }
+                renderVacationDetail();
 
             } catch (error) {
                 console.error("휴가 등록 오류:", error);
                 alert("휴가 등록에 실패했습니다.");
             }
-
         });
 
 
     // 휴가 삭제
-    container.querySelectorAll(".delete-vacation-button").forEach(button => {
+    container.querySelectorAll(".delete-vacation-button")
+        .forEach(button => {
 
-        button.addEventListener("click", async () => {
+            button.addEventListener("click", async () => {
 
-            const team = button.dataset.team;
-            const date = selectedVacationDate;
+                const team = button.dataset.team;
+                const date = selectedVacationDate;
 
-            if (!confirm(`${date} ${team} 휴가를 삭제할까요?`)) {
-                return;
-            }
-
-            try {
-                const deleted = await deleteVacationSafely(date, team);
-
-                if (!deleted) {
-                    alert("휴가 정보가 변경되었습니다. 화면을 확인해주세요.");
+                if (!confirm(`${date} ${team} 휴가를 삭제할까요?`)) {
+                    return;
                 }
 
-            } catch (error) {
-                console.error("휴가 삭제 오류:", error);
-                alert("휴가 삭제에 실패했습니다.");
-            }
+                try {
+                    const deleted = await deleteVacationSafely(date, team);
 
+                    if (!deleted) {
+                        alert("휴가 정보가 변경되었습니다. 화면을 확인해주세요.");
+                    }
+
+                } catch (error) {
+                    console.error("휴가 삭제 오류:", error);
+                    alert("휴가 삭제에 실패했습니다.");
+                }
+            });
         });
-
-    });
-
 }
 
 
@@ -920,11 +1087,6 @@ function renderVacationDetail() {
    최초 실행
 ========================================== */
 
-// 조직도 출력
 renderOrganization();
-
-// 달력 출력
 renderCalendar();
-
-// Firebase 실시간 동기화 시작
 startFirebaseSync();
